@@ -26,14 +26,17 @@ backends:
   bar: { servers: { foo: { url: "http://baz:80" } } }
 frontends:
   another1:
+    backend: foo
     routes: { route001: { rule: "Host:another.com;PathPrefix:/foo" } }
   demo-frontend-options:
+    backend: bar
     passHostHeader: true
     priority: 1000
     routes:
       route001: { rule: "Host:www.example.com,example.com" }
       route002: { rule: "PathPrefix:/foo,/bar" }
   something:
+    backend: foo
     routes: { route001: { rule: "Host:something.com" } }
 ~~~
 
