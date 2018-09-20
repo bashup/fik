@@ -53,6 +53,7 @@ loco_loadproject() {
 		fi
 		project-key "$FIK_PROJECT"
 	fi
+	event emit project-loaded
 }
 
 mdsh-error() { printf -v REPLY "$1"'\n' "${@:2}"; loco_error "$REPLY"; }
@@ -99,6 +100,21 @@ tls() {
 	fi
 }
 
+```
+
+### Unique Backends
+
+```shell
+unique-backends() { event "${1:-on}" frontend unique-backend; }
+
+unique-backend() {
+	local f
+	f+='| .frontends[$fe].backend as $old'
+	f+='| "\($old): \($fe)" as $new'
+	f+='| .backends[$new]=.backends[$old]'
+	f+='| .frontends[$fe].backend = $new'
+	event once project-loaded APPLY ".$f" fe="${1-$fik_frontend}"
+}
 ```
 
 ## Commands

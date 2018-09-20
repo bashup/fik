@@ -57,6 +57,7 @@ However you generate them, you can use `fik toml` or `fik json` to see the resul
   * [Setting Arbitrary Proprties](#setting-arbitrary-proprties)
   * [Event Hooks and Macros](#event-hooks-and-macros)
   * [Custom Directives Using YAML Blocks](#custom-directives-using-yaml-blocks)
+  * [Workaround for Traefik Issue 3725 (wrong frontend names in logs)](#workaround-for-traefik-issue-3725-wrong-frontend-names-in-logs)
 - [TOML Filenames](#toml-filenames)
 
 <!-- tocstop -->
@@ -213,6 +214,18 @@ to set a default `health-interval` for every subsequent `backend`.
 Custom directives can be placed in a separate `.md` file, which can then be loaded using [`mdsh-run`](https://github.com/bashup/mdsh/#available-functions) from any script block or file.  (So if you have global common directives, you can put them in a global `.md` file and then `mdsh-run` that file from your `$HOME/.config/fikrc` or `/etc/traefik/fikrc`, to make them available to all projects.)
 
 For more on the process of creating shell functions like these from markdown blocks, see the jqmd documentation on [reusable code blocks](https://github.com/bashup/jqmd/#reusable-blocks).
+
+#### Workaround for Traefik Issue 3725 (wrong frontend names in logs)
+
+Currently, Traefik (at least through version 1.7.0-rc5) [doesn't log the correct front-end name when a backend is shared between multiple front-ends](https://github.com/containous/traefik/issues/3725).  You can work around this issue by defining unique backends for each frontend, using the `unique-backend` and/or `unique-backends` directives.
+
+The `unique-backend` *[frontend]* directive flags the named *frontend* as needing a unique backend.  (If no *frontend* is given, the current frontend is assumed.)
+
+When configuration is complete, frontends flagged with `unique-backend` will have unique backends created for them, whose names will be of the form `"backend: frontend"`, where `backend` is the backend previously associated with `frontend`.  (The settings for the new backend will be copied from the old one.)
+
+To avoid having to invoke `unique-backend` after every `match`, you can use `unique-backends on`, which is equivalent to `event on "frontend" unique-backend`.  (That is, `unique-backend` will be called for every new `match`.)  `unique-backends off` turns this behavior off again.
+
+Note: this feature is strictly a workaround until the underlying Traefik issue is fixed.  Be sure to `fik diff` your project's routes and review the effects it has before you `fik up` with this directive in use.  (Not that it isn't *always* a good idea to `fik diff` before you `fik up`!)
 
 ### TOML Filenames
 
