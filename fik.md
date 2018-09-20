@@ -57,6 +57,7 @@ loco_loadproject() {
 }
 
 mdsh-error() { printf -v REPLY "$1"'\n' "${@:2}"; loco_error "$REPLY"; }
+unset -f mdsh:file-footer  # don't add jqmd footer to compiled .md files
 ```
 
 ### Routing Rules
@@ -105,15 +106,18 @@ tls() {
 ### Unique Backends
 
 ```shell
+DEFINE '
+	def fik::unique_backend($frontend): .
+		| .frontends[$frontend].backend as $original
+		| "\($original): \($frontend)" as $unique_name
+		| .backends[$unique_name] = .backends[$original]
+		| .frontends[$frontend].backend = $unique_name
+	;
+'
 unique-backends() { event "${1:-on}" frontend unique-backend; }
 
 unique-backend() {
-	local f
-	f+='| .frontends[$fe].backend as $old'
-	f+='| "\($old): \($fe)" as $new'
-	f+='| .backends[$new]=.backends[$old]'
-	f+='| .frontends[$fe].backend = $new'
-	event once project-loaded APPLY ".$f" fe="${1-$fik_frontend}"
+	event once project-loaded FILTER 'fik::unique_backend(%s)' "${1-$fik_frontend}"
 }
 ```
 

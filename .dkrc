@@ -29,7 +29,7 @@ on "boot" require-any jq
 
 watch+ "*.md" "specs/*" "!**/*.md.err" "!**/.~*.md" -- dk test
 
-before "test" jqmd --out "$BASHER_INSTALL_BIN"/fik --compile fik.md
+before "test" mdsh --out "$BASHER_INSTALL_BIN"/fik --compile fik.md
 
 on build mdsh --out bin/fik --compile fik.md
 on build chmod +x bin/fik
