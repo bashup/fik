@@ -87,6 +87,14 @@ __series() {
 	printf -v itemno %s%03d "${5-$3}" "$itemno"
 	APPLY ".$1s[\$fik_$1].$2[\$itemno].$3 = \$val" itemno val="$4"
 }
+
+tls() {
+	FILTER '.tls+=[{certificate: {certFile:%s, keyFile:%s}}]' "$1" "$2"
+	if (($#>2)); then
+		JSON-LIST "${@:3}"; FILTER ".tls[-1].entryPoints=$REPLY"
+	fi
+}
+
 ```
 
 ## Commands
