@@ -24,7 +24,7 @@ on "boot" require loco          github bashup/loco      master bin/loco
 on "boot" require mdsh          github bashup/mdsh      master bin/mdsh
 on "boot" require jqmd          github bashup/jqmd      master bin/jqmd
 on "boot" require realpaths     github bashup/realpaths master realpaths
-on "boot" require bashup.events github bashup/events    master bashup.events
+on "boot" require bashup.events github bashup/events    bash44 bashup.events
 on "boot" require-any jq
 
 watch+ "*.md" "specs/*" "!**/*.md.err" "!**/.~*.md" -- dk test
