@@ -144,8 +144,8 @@ fik.old-json() {
 ### Routefile Generation
 
 ```shell
-fik.toml()     { fik json | json2toml | colorize toml; }
-fik.json()     { local JQ_CMD=(jq-tty); RUN_JQ -n -S; }
+fik.toml()     { fik json -c | json2toml | colorize toml; }
+fik.json()     { local JQ_CMD=(jq-tty); RUN_JQ -n -S "$@"; }
 
 json2toml() { pypipe "pytoml.dumps(json.loads(s), sort_keys=True)" "pytoml,json"; }
 toml2json() { pypipe "json.dumps(pytoml.loads(s))" "pytoml,json"; }
