@@ -40,7 +40,7 @@ frontends:
     routes: { route001: { rule: "Host:something.com" } }
 ~~~
 
-By placing the above shell script in a `.fik` file, or the above YAML in a `fik.yml` file (or one or both as `shell` and `yaml` blocks in a `fik.md` file!), you can then use `fik up` to convert the route specifications to TOML and install them in an appropriate global directory  (`/etc/traefik/routes` by default).
+By placing the above shell script in a `.fik` file, or the above YAML in a `fik.yml` file (or one or both as `shell` and `yaml` blocks in a `fik.md` file!), you can then use `fik up` to write the route specifications to a [uniquely-named .toml file](#toml-filenames-and-project-keys) in an appropriate global directory  (`/etc/traefik/routes` by default).
 
 Your projects aren't limited to a single YAML block or even configuration file, though: shell or `.md` files can include others, and `.md` files can contain multiple YAML or shell blocks.  You can even generate your routes programmatically!
 
@@ -54,13 +54,13 @@ However you generate them, you can use `fik toml` or `fik json` to see the resul
   * [Optional Enhancements](#optional-enhancements)
 - [Basic Use](#basic-use)
 - [Traefik Configuration](#traefik-configuration)
+  * [TOML Filenames and Project Keys](#toml-filenames-and-project-keys)
 - [Command-Line Interface](#command-line-interface)
 - [Routing Directives](#routing-directives)
   * [Setting Arbitrary Proprties](#setting-arbitrary-proprties)
   * [Event Hooks and Macros](#event-hooks-and-macros)
   * [Custom Directives Using YAML Blocks](#custom-directives-using-yaml-blocks)
   * [Workaround for Traefik Issue 3725 (wrong frontend names in logs)](#workaround-for-traefik-issue-3725-wrong-frontend-names-in-logs)
-- [TOML Filenames](#toml-filenames)
 
 <!-- tocstop -->
 
@@ -115,6 +115,23 @@ Whatever you set `FIK_ROUTES` to (or even if you don't set it at all), you will 
 ```
 
 If you are running Traefik in a docker container and `fik` on the host, `FIK_ROUTES` should be the host's path to the directory, while the Traefik setting should reflect the container's path.
+
+#### TOML Filenames and Project Keys
+
+Each `fik` project has its own, automatically-generated `.toml` routing file under `$FIK_ROUTES`.  This file's name **must** be unique to each project, to prevent one project's routes from overwriting another's.
+
+To avoid the need for manually assigning unique keys, `fik` automatically generates a random UUID and saves it in a `.fik-project` file in the project directory.  You must make sure this file always remains alongside the configuration files (e.g. if you move them to a new directory).  Otherwise, you will end up with a new key and a duplicate `fik-*.toml` route file.
+
+Similarly, you must not **copy** the `.fik-project` to other directories, or they will share the same route file and overwrite each other!  (In most cases, you will also want to avoid checking this file into revision control, so that different checkouts of the same repository will have their own unique IDs and thus won't overwrite each other.)
+
+If for some reason you are *intentionally* changing a project's key, you should remove its existing route file with `fik down` before the change, then create the new route file with `fik up` after the change.  Alternately, if you need to leave the routes in effect *during* the change, you can:
+
+1. Run `fik filename` to get the project's *old* `.toml` filename
+2. Do whatever you're going to do that affects the key (e.g. removing or editing `.fik-project`, or moving the config files to a different directory without it)
+3. Run `fik filename` again, to get the project's *new* `.toml` filename
+4. Rename the file given by step 1, to the filename given by step 3
+
+You can then resume using `fik up`, `fik diff`, etc. with the new project key.
 
 ### Command-Line Interface
 
@@ -229,19 +246,4 @@ To avoid having to invoke `unique-backend` after every `match`, you can use `uni
 
 Note: this feature is strictly a workaround until the underlying Traefik issue is fixed.  Be sure to `fik diff` your project's routes and review the effects it has before you `fik up` with this directive in use.  (Not that it isn't *always* a good idea to `fik diff` before you `fik up`!)
 
-### TOML Filenames
 
-Each `fik` project has its own, automatically-generated `.toml` routing file under `$FIK_ROUTES`.  This file's name **must** be unique to each project, to prevent one project's routes from overwriting another's.
-
-To avoid the need for manually assigning unique keys, `fik` automatically generates a random UUID and saves it in a `.fik-project` file in the project directory.  You must make sure this file is moved when the project is moved, or is moved with the configuration files if you move them to a new directory.  Otherwise, you will end up with a new key and a duplicate route file.
-
-Similarly, you must **not** copy the `.fik-project` to other directories, or they will share the same route file and overwrite each other!  (In most cases, you will also want to avoid checking this file into revision control, so that different checkouts of the same repository will have their own unique IDs and not overwrite each other.)
-
-If you are changing a project's key, you should remove its existing route file with `fik down` before the change, then create the new route file with `fik up` after the change.  Alternately, if you need to leave the routes in effect during the change, you can:
-
-1. Run `fik filename` to get the project's *old* TOML filename
-2. Do whatever you're going to do that affects the key (e.g. removing or editing `.fik-project`, or moving the config files to a different directory without it)
-3. Run `fik filename` again, to get the project's *new* TOML filename
-4. Rename the file given by step 1, to the filename given by step 3
-
-You can then resume using `fik up`, `fik diff`, etc. with the new project key.
