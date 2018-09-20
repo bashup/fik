@@ -11,7 +11,8 @@ match another1  "Host:another.com;PathPrefix:/foo"
 
 backend bar "http://baz:80"
 
-match complex-example
+match demo-frontend-options
+pass-host
 priority 1000
 must-have "Host:www.example.com,example.com"
 must-have "PathPrefix:/foo,/bar"
@@ -25,16 +26,14 @@ backends:
   bar: { servers: { foo: { url: "http://baz:80" } } }
 frontends:
   another1:
-    passHostHeader: true
     routes: { route001: { rule: "Host:another.com;PathPrefix:/foo" } }
-  complex-example:
+  demo-frontend-options:
     passHostHeader: true
     priority: 1000
     routes:
       route001: { rule: "Host:www.example.com,example.com" }
       route002: { rule: "PathPrefix:/foo,/bar" }
   something:
-    passHostHeader: true
     routes: { route001: { rule: "Host:something.com" } }
 ~~~
 
