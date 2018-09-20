@@ -55,6 +55,7 @@ However you generate them, you can use `fik toml` or `fik json` to see the resul
 - [Command-Line Interface](#command-line-interface)
 - [Routing Directives](#routing-directives)
   * [Setting Arbitrary Proprties](#setting-arbitrary-proprties)
+  * [Event Hooks and Macros](#event-hooks-and-macros)
   * [Custom Directives Using YAML Blocks](#custom-directives-using-yaml-blocks)
 - [TOML Filenames](#toml-filenames)
 
@@ -139,7 +140,8 @@ The following directives can be used to define routes from shell code in `.fik` 
 
 * `backend` *name [urls...]* -- set the current backend to *name*, optionally adding any given *urls* to the backend's `servers` list (equivalent to calling `server` on each url).
 * `server` *url* -- add *url* to the `servers` for the current backend.  No duplicate-checking is done: keys are assigned sequentially as `url001`, `url002`, etc.
-* `match` *name [rules...]* -- set the current frontend to *name*, optionally adding any given *rules* to the frontend's `routes` list (equivalent to calling `must-have` on each rule).  The frontend's `backend` is set to the current backend, and its `passHostHeader` is set to `true`.
+* `match` *name [rules...]* -- set the current frontend to *name*, optionally adding any given *rules* to the frontend's `routes` list (equivalent to calling `must-have` on each rule).  The frontend's `backend` is set to the current backend
+* `pass-host` *[bool]* -- Set the current frontend's  `passHostHeader` to *bool*, which defaults to `true` if not given.  (If given, *bool* must be `true` or `false`.)
 * `must-have` *rule* -- add *rule* to the `routes` for the current frontend.  No duplicate-checking is done: keys are assigned sequentially as `rule001`, `rule002`, etc.
 * `priority` *priority* -- set the current frontend's `priority` to *priority*
 * `tls` *cert key [entrypoints...]* -- add a certificate/private-key pair to zero or more *entrypoints*.  If no *entrypoints* are given, the certificate is added to all entry points.  *cert* and *key* can be either filenames or the actual PEM data; if they're filenames, they must be readable by Traefik.
@@ -161,6 +163,30 @@ Both `backend-set` and `frontend-set` are wrappers around jqmd's `APPLY` functio
 
 (For more on how `APPLY` works, see the [jqmd functions documentation](https://github.com/bashup/jqmd/#adding-jq-code-and-data).)
 
+#### Event Hooks and Macros
+
+`fik` uses the [bashup/events](https://github.com/bashup/events/tree/bash44#readme) library to let you extend its directives with event handlers.  For example, if you wanted to have every frontend pass a host header and use a priority of 1000, you could use the shell code:
+
+```shell
+event on "frontend" pass-host
+event on "frontend" priority 1000
+```
+
+Every `match` directive run after these commands will invoke the `pass-host` and `priority 1000` commands before adding the given rules (if any).  You can then individually override these settings on a per-frontend basis, or use e.g. `event off "frontend" pass-host` to disable an individual handler.
+
+(Note: if you add handlers that add rules, routes, or anything else that's accumulated rather than set, make sure you `event off` the old handler before you define a new one, so you don't end up with both things being added when you only wan the second one.  It's not as important for things like `priority`, since all that will happen if you add a new handler is that the priority will be set twice, but it's still a good idea.)
+
+The currently available events and their arguments are:
+
+* `event emit "backend"` *name [urls...]* -- emitted after a `backend` directive creates or selects a backend, but before any URLs are added.
+* `event emit "url"` *key url* -- emitted when a URL is added to a backend, either via the `backend` directive or a `server` directive.  The *key* is the automatically-generated key under `.backends[$fik_backend].servers`, and the *url* is the URL being added.
+* `event emit "frontend"` *name [urls...]* -- emitted after a `match` directive creates or selects a frontend and sets its backend, but before any routing rules are added.
+* `event emit "rule"` *key rule* -- emitted when a rule is added to a frontend, either via the `match` directive or a `must-have` directive.  The *key* is the automatically-generated key under `.frontends[$fik_frontend].routes`, and the *rule* is the rule being added.
+
+When the above events run, the name of the current backend is in `$fik_backend` in both shell and jq variables.  When the `frontend` and `rule` events are run, the current frontend name is in `$fik_frontend` in both shell and jq variables.
+
+Please see the [bashup/events documentation](https://github.com/bashup/events/tree/bash44#readme) for more information on adding and removing event listeners or handling event arguments.
+
 #### Custom Directives Using YAML Blocks
 
 If you are using a `fik.md` file, you can define your own directives using YAML blocks and interpolation.  For example, if your .fik md contains this:
@@ -174,7 +200,15 @@ backends:
 ```
 ~~~
 
-Then at any point below that block, you will be able to call e.g. `health-interval "10s"` to set the current backend's healthcheck interval.  (Your blocks can interpolate `$fik_backend` and `$fik_frontend` to get the name of the current back or front end.)
+Then at any point below that block, you will be able to call e.g. `health-interval "10s"` to set the current backend's healthcheck interval.  (Your blocks can interpolate `$fik_backend` and `$fik_frontend` to get the name of the current back or front end.)  In addition, since `health-interval` is now a directive in its own right, you can add something like:
+
+~~~markdown
+```shell
+event on "backend" health-interval "30s"
+```
+~~~
+
+to set a default `health-interval` for every subsequent `backend`.
 
 Custom directives can be placed in a separate `.md` file, which can then be loaded using [`mdsh-run`](https://github.com/bashup/mdsh/#available-functions) from any script block or file.  (So if you have global common directives, you can put them in a global `.md` file and then `mdsh-run` that file from your `$HOME/.config/fikrc` or `/etc/traefik/fikrc`, to make them available to all projects.)
 

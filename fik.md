@@ -67,17 +67,20 @@ frontend-set() { APPLY ".frontends[\$fik_frontend] |= ($1)" "${@:2}"; }
 backend-set() { APPLY ".backends[\$fik_backend] |= ($1)" "${@:2}"; }
 
 backend() {
-	fik_backend=$1; shift; APPLY . fik_backend
-	while (($#)); do server "$1"; shift; done
+	fik_backend=$1; APPLY . fik_backend
+	event emit backend "$@";
+	while shift; (($#)); do server "$1"; done
 }
 
 match() {
-	fik_frontend=$1; shift; APPLY . fik_frontend
-	frontend-set '.backend=$fik_backend | .passHostHeader=true'
-	while (($#)); do must-have "$1"; shift; done
+	fik_frontend=$1; APPLY . fik_frontend
+	frontend-set '.backend=$fik_backend'
+	event emit frontend "$@";
+	while shift; (($#)); do must-have "$1"; shift; done
 }
 
 priority() { frontend-set ".priority=$1"; }
+pass-host() { frontend-set '.passHostHeader=$bool' @bool="${1-true}"; }
 
 must-have() { __series frontend routes  rule "$1"; }
 server()    { __series backend  servers url  "$1"; } # "$fik_backend"; }
@@ -86,6 +89,7 @@ __series() {
 	local -n key=fik_${1} map=fik_${3}_counts; local itemno=$((++map["$key"]))
 	printf -v itemno %s%03d "${5-$3}" "$itemno"
 	APPLY ".$1s[\$fik_$1].$2[\$itemno].$3 = \$val" itemno val="$4"
+	event emit "$3" "$itemno" "$4"
 }
 
 tls() {
