@@ -38,7 +38,7 @@ frontends:
     routes: { route001: { rule: "Host:something.com" } }
 ~~~
 
-By placing the above shell script in a `.fik` file, or the above YAML in a `fik.yml` file (or one or both as `shell` and `yaml` blocks in a `fik.md` file!), you can then use `fik up` to convert the route specifications to TOML and install them in an appropriate global directory  (`/etc/traefik/routes/fik` by default).
+By placing the above shell script in a `.fik` file, or the above YAML in a `fik.yml` file (or one or both as `shell` and `yaml` blocks in a `fik.md` file!), you can then use `fik up` to convert the route specifications to TOML and install them in an appropriate global directory  (`/etc/traefik/routes` by default).
 
 Your projects aren't limited to a single YAML block or even configuration file, though: shell or `.md` files can include others, and `.md` files can contain multiple YAML or shell blocks.  You can even generate your routes programmatically!
 
@@ -98,7 +98,7 @@ Shell code in `.fik` and `fik.md` both have access to the full [jqmd](https://gi
 
 ### Traefik Configuration
 
-By default, `fik` writes TOML files to `/etc/traefik/routes/fik`, under the assumption that Traefik is watching for .toml route files in `/etc/traefik/routes`, and that the `fik` subdirectory is reserved for use by `fik`-generated files.
+By default, `fik` writes `fik-{project UUID}.toml` files to `/etc/traefik/routes`, under the assumption that Traefik is watching for .toml route files there.
 
 If you need to change this default directory, you can do so by setting `FIK_ROUTES` in any shell code read by `fik`.  That is, either the global `/etc/traefik/fikrc` and `$HOME/.config/fikrc`, or a project-specific `.fik` or `fik.md`.  (Note: exporting `FIK_ROUTES` in the shell environment *has no effect*; `FIK_ROUTES` can **only** be meaningfully set from within a `fik` configuration file.)
 
@@ -106,13 +106,11 @@ Whatever you set `FIK_ROUTES` to (or even if you don't set it at all), you will 
 
 ```toml
 [file]
-  directory = "/etc/traefik/routes"
+  directory = "/etc/traefik/routes/"
   watch = true
 ```
 
 If you are running Traefik in a docker container and `fik` on the host, `FIK_ROUTES` should be the host's path to the directory, while the Traefik setting should reflect the container's path.
-
-If you are only using `fik` to manage .toml route files, you can have Traefik watch `FIK_ROUTES`, instead of a parent directory.
 
 ### Command-Line Interface
 
@@ -188,12 +186,12 @@ Each `fik` project has its own, automatically-generated `.toml` routing file und
 
 To avoid the need for manually assigning unique keys, `fik` automatically generates a random UUID and saves it in a `.fik-project` file in the project directory.  You must make sure this file is moved when the project is moved, or is moved with the configuration files if you move them to a new directory.  Otherwise, you will end up with a new key and a duplicate route file.
 
-Similarly, you must **not** copy the `.fik-project` to other directories, or they will share the same route file and overwrite each other!  (In most cases, you will also want to avoid checking this file into revision control, so that different checkouts of the same repository will have their own unique project IDs.)
+Similarly, you must **not** copy the `.fik-project` to other directories, or they will share the same route file and overwrite each other!  (In most cases, you will also want to avoid checking this file into revision control, so that different checkouts of the same repository will have their own unique IDs and not overwrite each other.)
 
 If you are changing a project's key, you should remove its existing route file with `fik down` before the change, then create the new route file with `fik up` after the change.  Alternately, if you need to leave the routes in effect during the change, you can:
 
 1. Run `fik filename` to get the project's *old* TOML filename
-2. Remove or edit the `.fik-project` file
+2. Do whatever you're going to do that affects the key (e.g. removing or editing `.fik-project`, or moving the config files to a different directory without it)
 3. Run `fik filename` again, to get the project's *new* TOML filename
 4. Rename the file given by step 1, to the filename given by step 3
 

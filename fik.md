@@ -25,13 +25,13 @@ loco_preconfig() {
     LOCO_USER_CONFIG=$HOME/.config/fikrc
     LOCO_SITE_CONFIG=/etc/traefik/fikrc
 
-    FIK_ROUTES=/etc/traefik/routes/fik
+    FIK_ROUTES=/etc/traefik/routes
     FIK_TOML=
     FIK_PROJECT=
 }
 
 uuid4() { pypipe "str(uuid.uuid4())" "uuid" </dev/null; }
-as-routefile() { event encode "$1"; realpath.absolute "$FIK_ROUTES" "$REPLY.toml"; }
+as-routefile() { event encode "$1"; realpath.absolute "$FIK_ROUTES" "fik-$REPLY.toml"; }
 project-key() { FIK_PROJECT="$1"; as-routefile "$1"; FIK_TOML=$REPLY; }
 
 loco_loadproject() {
