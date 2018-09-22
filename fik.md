@@ -117,7 +117,7 @@ DEFINE '
 unique-backends() { event "${1:-on}" frontend unique-backend; }
 
 unique-backend() {
-	event once project-loaded FILTER 'fik::unique_backend(%s)' "${1-$fik_frontend}"
+	event on project-loaded FILTER 'fik::unique_backend(%s)' "${1-$fik_frontend}"
 }
 ```
 
