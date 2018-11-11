@@ -187,16 +187,17 @@ Both `backend-set` and `frontend-set` are wrappers around jqmd's `APPLY` functio
 
 #### Event Hooks and Macros
 
-`fik` uses the [bashup/events](https://github.com/bashup/events/tree/bash44#readme) library to let you extend its directives with event handlers.  For example, if you wanted to have every frontend pass a host header and use a priority of 1000, you could use the shell code:
+`fik` uses the [bashup/events](https://github.com/bashup/events/tree/bash44#readme) library to let you extend its directives with event handlers.  For example, if you wanted to have every frontend pass a host header, use a priority of 1000, and require SSL, you could use the shell code:
 
 ```shell
 event on "frontend" pass-host
 event on "frontend" priority 1000
+event on "frontend" require-ssl
 ```
 
-Every `match` directive run after these commands will invoke the `pass-host` and `priority 1000` commands before adding the given rules (if any).  You can then individually override these settings on a per-frontend basis, or use e.g. `event off "frontend" pass-host` to disable an individual handler.
+Every `match` directive run after these commands will invoke the `pass-host`, `priority 1000`, and `require-ssl` commands before adding the given rules (if any).  You can then individually override these settings on a per-frontend basis, or stop them from applying automatically by using e.g. `event off "frontend" pass-host` to remove an individual event handler.
 
-(Note: if you add handlers that add rules, routes, or anything else that's accumulated rather than set, make sure you `event off` the old handler before you define a new one, so you don't end up with both things being added when you only wan the second one.  It's not as important for things like `priority`, since all that will happen if you add a new handler is that the priority will be set twice, but it's still a good idea.)
+(Note: if you add handlers that add rules, routes, or anything else that's *accumulated* rather than set, make sure you `event off` the old handler before you define a new one, so you don't end up with both things being added when you only want the second one.  It's not as important for things like `priority`, since all that will happen if you add a new handler is that the priority will be set twice, but it's still a good idea.)
 
 The currently available events and their arguments are:
 
@@ -205,7 +206,7 @@ The currently available events and their arguments are:
 * `event emit "frontend"` *name [urls...]* -- emitted after a `match` directive creates or selects a frontend and sets its backend, but before any routing rules are added.
 * `event emit "rule"` *key rule* -- emitted when a rule is added to a frontend, either via the `match` directive or a `must-have` directive.  The *key* is the automatically-generated key under `.frontends[$fik_frontend].routes`, and the *rule* is the rule being added.
 
-When the above events run, the name of the current backend is in `$fik_backend` in both shell and jq variables.  When the `frontend` and `rule` events are run, the current frontend name is in `$fik_frontend` in both shell and jq variables.
+When any of the above events run, the name of the current backend is in `$fik_backend` in both shell and jq variables.  When the `frontend` and `rule` events are run, the current frontend name is in `$fik_frontend` in both shell and jq variables.
 
 Please see the [bashup/events documentation](https://github.com/bashup/events/tree/bash44#readme) for more information on adding and removing event listeners or handling event arguments.
 
