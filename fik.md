@@ -106,6 +106,10 @@ redirect() {
 		from="$1" to="$2" @perm="${3:-false}"
 }
 
+require-ssl() {
+	frontend-set '.headers |= ( .SSLRedirect = $redir | .SSLTemporaryRedirect = $temp )' \
+		@redir="${1-true}" @temp="${2-${1:-false}}"
+}
 ```
 
 ### Unique Backends
