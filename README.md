@@ -57,6 +57,7 @@ However you generate them, you can use `fik toml` or `fik json` to see the resul
   * [TOML Filenames and Project Keys](#toml-filenames-and-project-keys)
 - [Command-Line Interface](#command-line-interface)
 - [Routing Directives](#routing-directives)
+  * [Dehydrated Certificates](#dehydrated-certificates)
   * [Setting Arbitrary Proprties](#setting-arbitrary-proprties)
   * [Event Hooks and Macros](#event-hooks-and-macros)
   * [Custom Directives Using YAML Blocks](#custom-directives-using-yaml-blocks)
@@ -159,14 +160,40 @@ The pager can be set using `FIK_PAGER`, which defaults to `less -FRX`.  Colorizi
 The following directives can be used to define routes from shell code in `.fik` or from `shell` blocks in `fik.md`:
 
 * `backend` *name [urls...]* -- set the current backend to *name*, optionally adding any given *urls* to the backend's `servers` list (equivalent to calling `server` on each url).
+
 * `server` *url* -- add *url* to the `servers` for the current backend.  No duplicate-checking is done: keys are assigned sequentially as `url001`, `url002`, etc.
+
 * `match` *name [rules...]* -- set the current frontend to *name*, optionally adding any given *rules* to the frontend's `routes` list (equivalent to calling `must-have` on each rule).  The frontend's `backend` is set to the current backend
+
 * `pass-host` *[bool]* -- set the current frontend's  `passHostHeader` to *bool*, which defaults to `true` if not given.  (If given, *bool* must be `true` or `false`.)
+
 * `must-have` *rule* -- add *rule* to the `routes` for the current frontend.  No duplicate-checking is done: keys are assigned sequentially as `rule001`, `rule002`, etc.
+
 * `priority` *priority* -- set the current frontend's `priority` to *priority*
+
 * `redirect` *regex replacement [permanent]* -- set up a redirect pattern for the current front-end; *permanent* must be either `true` or `false`, and defaults to `false` if not given.
+
 * `require-ssl` *[redirect [temporary]]* -- enable or disable automatic SSL redirect for the current front-end.  Arguments must be `true` or `false`; if no arguments are given, redirection is on and permanent.  If *redirect* is `false`, redirection is disabled.  If only one argument is given, it's used for both *temporary* and *permanent*, so `ssl-redirect true` enables SSL redirection and makes it temporary.
+
 * `tls` *cert key [entrypoints...]* -- add a certificate/private-key pair to zero or more *entrypoints*.  If no *entrypoints* are given, the certificate is added to all entry points.  *cert* and *key* can be either filenames or the actual PEM data; if they're filenames, they must be readable by Traefik.
+
+  (Note: since Traefik does not currently support watching changes to certificate and key files, it's usually better to include the actual certificate data, e.g. using `tls "$(</my/cert.pem)" "$(</my/key.pem)"`.  Then, the certs can be updated by running `fik up`, perhaps via a `dehydrated` hook or a cron job.)
+
+#### Dehydrated Certificates
+
+`fik` supports using [dehydrated](https://github.com/lukas2511/dehydrated) certificates for [Traefik dynamic TLS](https://docs.traefik.io/configuration/entrypoints/#dynamic-certificates), using the following directives:
+
+* `hydrate` *domain-or-alias [entrypoints...]* -- load the dehyrated certificate named *domain-or-alias* from `$CERTDIR`, adding it to the specified *entrypoints*.   If no *entrypoints* are given, the certificate is added to all entry points.  If `$CERTDIR` is empty, `dehydrated-config` is run to locate it.
+
+* `hydrate-all` *[entrypoints...]* -- `hydrate` each certificate listed in `$DOMAINS_TXT`, adding them to the specified *entrypoints*.   If no *entrypoints* are given, all certificates are added to all entry points.
+
+  (Note: aliases are supported, so if a line reads e.g. `some-domain.com *.some-domain.com >some-domain-com`, the certificate will be looked for under `$CERTDIR/some-domain-com/`.  If `$DOMAINS_TXT` is empty, `dehydrated-config` is run to locate it.)
+
+* `dehydrated-config` *[config-file]* -- use the specified *config-file* to identify the `$CERTDIR` and `$DOMAINS_TXT` that will be used by any subsequent `hydrate` or `hydrate-all` commands.  If *config-file* sets a `CONFIG_D`, any `$CONFIG_D/*.sh` files are loaded, too.
+
+  If no *config-file* is given, a dehydrated config file is searched for using the same algorithm as that used by dehydrated.  (That is, by looking for a `config` file in `/etc/dehydrated`, `/usr/local/etc/dehydrated`, `$PWD`, and finally the directory where the `dehydrated` command is installed.)
+
+Assuming your dehydrated configuration is in a standard location, you can trivially add all your dehydrated certificates to all Traefik TLS entrypoints using just the `hydrate-all` directive.  For example, you could create an `/etc/dehydrated/.fik` file containing just `hydrate-all`, and then have your dehydrated `exit_hook` run `cd "$BASEDIR" && fik up`, to automatically refresh Traefik's certificate list when certificates are added or renewed.
 
 #### Setting Arbitrary Proprties
 

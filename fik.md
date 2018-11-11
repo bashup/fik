@@ -57,7 +57,7 @@ loco_loadproject() {
 }
 
 mdsh-error() { printf -v REPLY "$1"'\n' "${@:2}"; loco_error "$REPLY"; }
-unset -f mdsh:file-footer  # don't add jqmd footer to compiled .md files
+unset -f mdsh:file-header mdsh:file-footer  # don't add jqmd runtime or footer to compiled .md files
 ```
 
 ### Routing Rules
@@ -128,6 +128,69 @@ unique-backends() { event "${1:-on}" frontend unique-backend; }
 unique-backend() {
 	event on project-loaded FILTER 'fik::unique_backend(%s)' "${1-$fik_frontend}"
 }
+```
+
+### Dehydrated Certificates
+
+```shell
+DOMAINS_TXT=
+CERTDIR=
+BASEDIR=
+
+hydrate-all() {
+	# Read TLS certs for all domains listed in domains.txt
+	[[ $DOMAINS_TXT ]] || dehydrated-config
+	while read -ra REPLY; do
+		[[ ${REPLY[*]} && $REPLY != '#'* ]] || continue  # skip blank/comment lines
+		[[ ! ${REPLY[*]} =~ '>'[^[:space:]]+ ]] || REPLY=${BASH_REMATCH#>}
+		hydrate "$REPLY" "$@"
+	done <"$DOMAINS_TXT"
+}
+
+hydrate() {
+	[[ $CERTDIR ]] || dehydrated-config
+	if [[ -f "$CERTDIR/$1/privkey.pem" && -f "$CERTDIR/$1/fullchain.pem" ]]; then
+		tls "$(<"$CERTDIR/$1/fullchain.pem")" "$(<"$CERTDIR/$1/privkey.pem")" "${@:2}"
+	fi
+}
+
+dehydrated-config() {
+	# Find the dehydrated configuration
+	if [[ ${1-} ]]; then
+		CONFIG="$1"
+	else
+		set -- /etc/dehydrated/config /usr/local/etc/dehydrated/config "$PWD"/config
+		if REPLY="$(command -v dehydrated)"; then
+			realpath.location "$REPLY"
+			set -- "$@" "$REPLY/config"
+		fi
+		for REPLY; do
+			[[ -f "$REPLY" ]] || continue; CONFIG=$REPLY; break
+		done
+	fi
+
+	[[ ${CONFIG-} ]]      || loco_error "Couldn't find any of: $@"
+	[[ -f "$CONFIG" ]] || loco_error "dehydated config file $CONFIG doesn't exist"
+
+	# Initialize the configuration
+	realpath.dirname "$CONFIG"
+	BASEDIR=$REPLY
+	CERTDIR=
+	DOMAINS_TXT=
+	CONFIG_D=
+
+	# Load the config file and any conf.d/*.sh files
+	. "$CONFIG"
+	if [[ $CONFIG_D && -d $CONFIG_D ]]; then
+		for REPLY in "$CONFIG_D"/*.sh; do
+			[[ ! -f "$REPLY" || ! -r "$REPLY" ]] || . "$REPLY"
+		done
+	fi
+
+	[[ $CERTDIR ]] || CERTDIR="$BASEDIR/certs"
+	[[ $DOMAINS_TXT ]] || DOMAINS_TXT="$BASEDIR/domains.txt"
+}
+
 ```
 
 ## Commands
