@@ -101,6 +101,11 @@ tls() {
 	fi
 }
 
+redirect() {
+	frontend-set '.redirect |= ( .regex = $from | .replacement = $to | .permanent = $perm )' \
+		from="$1" to="$2" @perm="${3:-false}"
+}
+
 ```
 
 ### Unique Backends

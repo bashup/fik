@@ -164,6 +164,7 @@ The following directives can be used to define routes from shell code in `.fik` 
 * `pass-host` *[bool]* -- set the current frontend's  `passHostHeader` to *bool*, which defaults to `true` if not given.  (If given, *bool* must be `true` or `false`.)
 * `must-have` *rule* -- add *rule* to the `routes` for the current frontend.  No duplicate-checking is done: keys are assigned sequentially as `rule001`, `rule002`, etc.
 * `priority` *priority* -- set the current frontend's `priority` to *priority*
+* `redirect` *regex replacement [permanent]* -- set up a redirect pattern for the current front-end; *permanent* must be either `true` or `false`, and defaults to `false` if not given.
 * `tls` *cert key [entrypoints...]* -- add a certificate/private-key pair to zero or more *entrypoints*.  If no *entrypoints* are given, the certificate is added to all entry points.  *cert* and *key* can be either filenames or the actual PEM data; if they're filenames, they must be readable by Traefik.
 
 #### Setting Arbitrary Proprties
