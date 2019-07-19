@@ -78,7 +78,7 @@ match() {
 	fik_frontend=$1; APPLY . fik_frontend
 	frontend-set '.backend=$fik_backend'
 	event emit frontend "$@";
-	while shift; (($#)); do must-have "$1"; shift; done
+	while shift; (($#)); do must-have "$1"; done
 }
 
 priority() { frontend-set ".priority=$1"; }
@@ -110,6 +110,15 @@ require-ssl() {
 	frontend-set '.headers |= ( .SSLRedirect = $redir | .SSLTemporaryRedirect = $temp )' \
 		@redir="${1-true}" @temp="${2-${1:-false}}"
 }
+
+request-header() {
+	FILTER ".frontends[\$fik_frontend].headers.customrequestheaders[%s]=%s" "$1" "$2"
+}
+
+response-header() {
+	FILTER ".frontends[\$fik_frontend].headers.customresponseheaders[%s]=%s" "$1" "$2"
+}
+
 ```
 
 ### Unique Backends

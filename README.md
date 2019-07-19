@@ -173,6 +173,10 @@ The following directives can be used to define routes from shell code in `.fik` 
 
 * `redirect` *regex replacement [permanent]* -- set up a redirect pattern for the current front-end; *permanent* must be either `true` or `false`, and defaults to `false` if not given.
 
+* `request-header` *name value* -- add a custom request header named *name*, with a value of *value*.
+
+* `response-header` *name value* -- add a custom response header named *name*, with a value of *value*.
+
 * `require-ssl` *[redirect [temporary]]* -- enable or disable automatic SSL redirect for the current front-end.  Arguments must be `true` or `false`; if no arguments are given, redirection is on and permanent.  If *redirect* is `false`, redirection is disabled.  If only one argument is given, it's used for both *temporary* and *permanent*, so `ssl-redirect true` enables SSL redirection and makes it temporary.
 
 * `tls` *cert key [entrypoints...]* -- add a certificate/private-key pair to zero or more *entrypoints*.  If no *entrypoints* are given, the certificate is added to all entry points.  *cert* and *key* can be either filenames or the actual PEM data; if they're filenames, they must be readable by Traefik.
